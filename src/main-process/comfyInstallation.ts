@@ -20,6 +20,11 @@ export class ComfyInstallation {
     return this._basePath;
   }
 
+  private _virtualEnvironment: VirtualEnvironment;
+  public get virtualEnvironment(): VirtualEnvironment {
+    return this._virtualEnvironment;
+  }
+
   /** Installation issues, such as missing base path, no venv.  Populated by {@link validate}. */
   validation: InstallValidation = {
     inProgress: false,
@@ -35,11 +40,6 @@ export class ComfyInstallation {
     return this.state === 'installed' && !this.hasIssues;
   }
 
-  private _virtualEnvironment: VirtualEnvironment;
-  public get virtualEnvironment(): VirtualEnvironment {
-    return this._virtualEnvironment;
-  }
-
   /**
    * Called during/after each step of validation
    * @param data The data to send to the renderer
@@ -53,7 +53,7 @@ export class ComfyInstallation {
     basePath: string,
     /** The device type to use for the installation. */
     public readonly telemetry: ITelemetry,
-    public readonly comfySettings: ComfySettings
+    public comfySettings: ComfySettings
   ) {
     this._basePath = basePath;
     this._virtualEnvironment = this.createVirtualEnvironment(basePath);
@@ -110,7 +110,7 @@ export class ComfyInstallation {
     // Validate base path
     const basePath = useDesktopConfig().get('basePath');
     if (basePath && (await pathAccessible(basePath))) {
-      this.updateBasePathAndVenv(basePath);
+      await this.updateBasePathAndVenv(basePath);
 
       validation.basePath = 'OK';
       this.onUpdate?.(validation);
@@ -203,11 +203,13 @@ export class ComfyInstallation {
    * Updates the base path and recreates the virtual environment (object).
    * @param basePath The new base path to set.
    */
-  updateBasePathAndVenv(basePath: string) {
+  async updateBasePathAndVenv(basePath: string) {
     if (this._basePath === basePath) return;
 
     this._basePath = basePath;
     this._virtualEnvironment = this.createVirtualEnvironment(basePath);
+    this.comfySettings = new ComfySettings(basePath);
+    await this.comfySettings.loadSettings();
     useDesktopConfig().set('basePath', basePath);
   }
 
