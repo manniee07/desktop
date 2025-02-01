@@ -9,6 +9,7 @@ import { registerAppInfoHandlers } from './handlers/appInfoHandlers';
 import { registerNetworkHandlers } from './handlers/networkHandlers';
 import { registerPathHandlers } from './handlers/pathHandlers';
 import { InstallationManager } from './install/installationManager';
+import { AppState } from './main-process/appState';
 import { AppWindow } from './main-process/appWindow';
 import { ComfyDesktopApp } from './main-process/comfyDesktopApp';
 import SentryLogging from './services/sentry';
@@ -17,36 +18,16 @@ import { DesktopConfig } from './store/desktopConfig';
 import { findAvailablePort } from './utils';
 
 dotenv.config();
-log.initialize();
-log.transports.file.level = (process.env.LOG_LEVEL as LevelOption) ?? 'info';
-log.info(`Starting app v${app.getVersion()}`);
+initalizeLogging();
 
 const allowDevVars = app.commandLine.hasSwitch('dev-mode');
-
 const telemetry = getTelemetry();
+const appState = new AppState();
+
 // Register the quit handlers regardless of single instance lock and before squirrel startup events.
-// Quit when all windows are closed.
-app.on('window-all-closed', () => {
-  log.info('Quitting ComfyUI because window all closed');
-  app.quit();
-});
-
-// Suppress unhandled exception dialog when already quitting.
-let quitting = false;
-app.on('before-quit', () => {
-  quitting = true;
-});
-
-app.on('quit', (event, exitCode) => {
-  telemetry.track('desktop:app_quit', {
-    reason: event,
-    exitCode,
-  });
-});
-
-// Sentry needs to be initialized at the top level.
-log.verbose('Initializing Sentry');
-SentryLogging.init();
+quitWhenAllWindowsAreClosed();
+trackAppQuitEvents();
+initializeSentry();
 
 // Synchronous app start
 const gotTheLock = app.requestSingleInstanceLock();
@@ -151,7 +132,7 @@ async function startApp() {
       log.error('Unhandled exception during app startup', error);
       appWindow.sendServerStartProgress(ProgressStatus.ERROR);
       appWindow.send(IPC_CHANNELS.LOG_MESSAGE, `${error}\n`);
-      if (!quitting) {
+      if (!appState.isQuitting) {
         dialog.showErrorBox(
           'Unhandled exception',
           `An unexpected error occurred whilst starting the app, and it needs to be closed.\n\nError message:\n\n${error}`
@@ -163,6 +144,37 @@ async function startApp() {
     log.error('Fatal error occurred during app pre-startup.', error);
     app.exit(2024);
   }
+}
+
+/** Must be called prior to any logging. Sets default log level and logs app version. */
+function initalizeLogging() {
+  log.initialize();
+  log.transports.file.level = (process.env.LOG_LEVEL as LevelOption) ?? 'info';
+  log.info(`Starting app v${app.getVersion()}`);
+}
+
+/** Quit when all windows are closed.*/
+function quitWhenAllWindowsAreClosed() {
+  app.on('window-all-closed', () => {
+    log.info('Quitting ComfyUI because window all closed');
+    app.quit();
+  });
+}
+
+/** Add telemetry for the app quit event. */
+function trackAppQuitEvents() {
+  app.on('quit', (event, exitCode) => {
+    telemetry.track('desktop:app_quit', {
+      reason: event,
+      exitCode,
+    });
+  });
+}
+
+/** Sentry needs to be initialized at the top level. */
+function initializeSentry() {
+  log.verbose('Initializing Sentry');
+  SentryLogging.init();
 }
 
 /**
