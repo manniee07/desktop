@@ -2,6 +2,13 @@
 #    uv pip compile C:\source\desktop\assets\ComfyUI\requirements.txt C:\source\desktop\assets\ComfyUI\custom_nodes\ComfyUI-Manager\requirements.txt --emit-index-annotation --emit-index-url --index-strategy unsafe-best-match --override C:\source\desktop\assets\override.txt -o C:\source\desktop\assets\requirements.cpu.compiled
 --index-url https://pypi.org/simple
 
+torch @ https://github.com/Nuullll/intel-extension-for-pytorch/releases/download/v2.1.10%2Bxpu/torch-2.1.0a0+cxx11.abi-cp310-cp310-win_amd64.whl
+torchsde
+torchvision @ https://github.com/Nuullll/intel-extension-for-pytorch/releases/download/v2.1.10%2Bxpu/torchvision-0.16.0a0+cxx11.abi-cp310-cp310-win_amd64.whl
+torchaudio @ https://github.com/Nuullll/intel-extension-for-pytorch/releases/download/v2.1.10+xpu/torchaudio-2.1.0a0+cxx11.abi-cp310-cp310-win_amd64.whl
+einops
+intel_extension_for_pytorch @ https://github.com/Nuullll/intel-extension-for-pytorch/releases/download/v2.1.10%2Bxpu/intel_extension_for_pytorch-2.1.10+xpu-cp310-cp310-win_amd64.whl
+
 aiohappyeyeballs==2.4.3
     # via
     #   --override assets/override.txt
